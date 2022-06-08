@@ -126,7 +126,7 @@ def plotCalSpectra(path, rawData, procData, exp, scan, frame, line, saveFig=Fals
                 transparent=True, bbox_inches='tight', pad_inches=0.01)
 
 
-#### Plot all images for single exp and scan
+#### Plot all XY images for single exp and scan
 def plotImages(path, rawData, procData, exp, scan, surfZ=0, fmin=5.58, fmax=5.82, lmin=0.0, lmax=1.5, pmin=0.0, pmax=1e5, saveFig=False):  
     # Import standard Brillouin colormap
     colors = np.genfromtxt('colormap.txt', delimiter='\t')
@@ -306,6 +306,119 @@ def plotImages(path, rawData, procData, exp, scan, surfZ=0, fmin=5.58, fmax=5.82
                         transparent=True, bbox_inches='tight', pad_inches=0.01)        
 
 
+#### Plot XZ image for single exp and scan
+def plotXZimage(path, rawData, procData, exp, scan, fmin=5.58, fmax=5.82, lmin=0.0, lmax=1.5, pmin=0.0, pmax=1e5, saveFig=False):
+    # Import standard Brillouin colormap
+    # colors = np.genfromtxt('colormap.txt', delimiter='\t')
+    # colormap = LinearSegmentedColormap.from_list('brillouin', colors, N=200)
+    colormap = 'jet'
+    # colormap = 'plasma' # perceptually uniform
+    
+    if saveFig:
+        # Make folder to save PDFs
+        if not os.path.exists(path + exp + '/PDFs/'):
+            os.makedirs(path + exp + '/PDFs/')
+        # Make folder to save brightfield images
+        if not os.path.exists(path + exp + '/Brightfield/'):
+            os.makedirs(path + exp + '/Brightfield/')
+    
+    frames = np.array([rawData[exp][scan]['attrs']['paramtree/Frame Number/X'],
+                        rawData[exp][scan]['attrs']['paramtree/Frame Number/Y'],
+                        rawData[exp][scan]['attrs']['paramtree/Frame Number/Z']])
+
+    # Measured step is based on the coordinates recorded by the Zaber stage
+    measStep = np.array([0.0, 0.0, 0.0])
+    if frames[0]>1:
+        measStep[0] = rawData[exp][scan]['MotorCoords'][1, 0] - rawData[exp][scan]['MotorCoords'][0, 0]
+    if frames[1]>1:
+        measStep[1] = rawData[exp][scan]['MotorCoords'][frames[0], 1] - rawData[exp][scan]['MotorCoords'][0, 1]
+    if frames[2]>1:
+        measStep[2] = rawData[exp][scan]['MotorCoords'][frames[0]*frames[1], 2] - rawData[exp][scan]['MotorCoords'][0, 2]
+    
+    # Extent of Brillouin map (based on span of Zaber motor coordinates)
+    xrange = rawData[exp][scan]['MotorCoords'][frames[0]-1, 0] - \
+        rawData[exp][scan]['MotorCoords'][0, 0]
+    zrange = rawData[exp][scan]['MotorCoords'][frames[0]*frames[2]-1, 2] - \
+        rawData[exp][scan]['MotorCoords'][0, 2]
+        
+    ### Plot frequency shift
+    plt.matshow(procData[exp][scan]['FreqArr'][:,0,:], cmap=colormap, \
+                vmin=fmin, vmax=fmax, origin='lower', interpolation=None, \
+                extent=(0, xrange, 0, zrange))
+    plt.colorbar(label='Brillouin frequency shift [GHz]', shrink=0.75)
+    plt.grid(b=None)
+    ax = plt.gca()
+    ax.axis('off')
+    ax.autoscale_view
+    scalebar = ScaleBar(1, 'um', length_fraction=0.3, location='upper left', \
+                        color='w', box_color='None')
+    ax.add_artist(scalebar)
+    if saveFig:
+        plt.savefig(path + exp + '/' + exp + '_' + scan + '_BFS.png', \
+                    transparent=True, bbox_inches='tight', pad_inches=0.01)
+        plt.savefig(path + exp + '/PDFs/' + exp + '_' + scan + '_BFS.pdf', \
+                    transparent=True, bbox_inches='tight', pad_inches=0.01)
+
+    ### Plot linewidth
+    plt.matshow(procData[exp][scan]['LWArr'][:,0,:], cmap=colormap, \
+                vmin=lmin, vmax=lmax, origin='lower', interpolation=None, \
+                extent=(0, xrange, 0, zrange))
+    plt.colorbar(label='Brillouin peak linewidth [GHz]', shrink=0.75)
+    plt.grid(b=None)
+    ax = plt.gca()
+    ax.axis('off')
+    ax.autoscale_view
+    scalebar = ScaleBar(1, 'um', length_fraction=0.3, location='upper left', \
+                        color='w', box_color='None')
+    ax.add_artist(scalebar)
+    if saveFig:
+        plt.savefig(path + exp + '/' + exp + '_' + scan + '_LW.png', \
+                    transparent=True, bbox_inches='tight', pad_inches=0.01)
+    
+    ### Plot signal intensity (integrated Brillouin photons in S/AS peaks)
+    plt.matshow(procData[exp][scan]['IntegrPhotonsArr'][:,0,:], cmap=colormap, \
+                vmin=pmin, vmax=pmax, origin='lower', interpolation=None, \
+                extent=(0, xrange, 0, zrange))
+    plt.colorbar(label='Integrated S/AS photons [#]', shrink=0.75)
+    plt.grid(b=None)
+    ax = plt.gca()
+    ax.axis('off')
+    ax.autoscale_view
+    scalebar = ScaleBar(1, 'um', length_fraction=0.3, location='upper left', \
+                        color='w', box_color='None')
+    ax.add_artist(scalebar)
+    if saveFig:
+        plt.savefig(path + exp + '/' + exp + '_' + scan + '_photons.png', \
+                    transparent=True, bbox_inches='tight', pad_inches=0.01)
+        
+    ### Plot Brightfield images:
+    # Size of single FLIR camera frame in um
+    imageSize = 9000.0/rawData[exp][scan]['attrs']['paramtree/Microscope Camera/Magnification']
+    for z in range(procData[exp][scan]['FreqArr'].shape[2]):
+        depth = z*measStep[2]
+
+        if 'CMOSImage' in rawData[exp][scan].keys():
+            image = np.rot90(rawData[exp][scan]['CMOSImage'][z], -1, (1,0)) # Rotate by -90 deg.
+        elif 'BrightfieldImage' in rawData[exp][scan].keys():
+            image = np.rot90(rawData[exp][scan]['BrightfieldImage'][z], -1, (1,0)) # Rotate by -90 deg.
+                    
+        plt.figure()
+        plt.grid(b=None)
+        plt.title(exp + '/' + scan + r', z = %.1f ${\rm \mu m}$' %depth)
+        plt.imshow(image, cmap='Greys_r', vmin=np.amin(image), vmax=np.amax(image), \
+                    interpolation='nearest', extent=(0, imageSize, 0, imageSize))
+        ax = plt.gca()
+        ax.axis('off')
+        ax.autoscale_view
+        scalebar = ScaleBar(1, 'um', length_fraction=0.2, location='upper left', \
+                            color=(1.0, 0.0, 0.0), box_color='None')
+        ax.add_artist(scalebar)
+        # ax.xaxis.set_ticks_position('bottom')
+        if saveFig:
+            plt.savefig(path + exp + '/Brightfield/' + exp + '_' + scan + r'_z_%d.png' %z, \
+                    transparent=True, bbox_inches='tight', pad_inches=0.01)
+
+
 #### Plot Brightfield images (only) for single exp and scan
 def plotBrightfield(path, rawData, procData, exp, scan, surfZ=0, saveFig=False):
     
@@ -332,7 +445,7 @@ def plotBrightfield(path, rawData, procData, exp, scan, surfZ=0, saveFig=False):
             depth = z*measStep[2] + rawData[exp][scan]['MotorCoords'][0,2] - surfZ
         print('Frame #%d, depth = %.1f um' %(z, depth))
         
-        ### Plot composite Brightfield image:
+        ### Plot Brightfield image:
         if 'CMOSImage' in rawData[exp][scan].keys():
             image = np.rot90(rawData[exp][scan]['CMOSImage'][z], -1, (1,0)) # Rotate by -90 deg.
         elif 'BrightfieldImage' in rawData[exp][scan].keys():

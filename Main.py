@@ -27,7 +27,7 @@ for exp in list(rawData.keys()):
         os.makedirs(fullPath + exp + '/')
 
 #%%
-###### Plot images for single exp, single scan ######
+###### Plot XY images for single exp, single scan ######
 
 # Save figures?
 saveFig = False
@@ -50,7 +50,7 @@ Plotting.plotImages(fullPath, rawData, procData, exp, scan, surfZ, \
                     fmin, fmax, lmin, lmax, pmin, pmax, saveFig)
 
 #%%
-###### Plot images of all scans for exp ######
+###### Plot XY images of all scans for exp ######
 
 # Save figures?
 saveFig = True
@@ -74,6 +74,29 @@ for scan in scans:
     # Plot Brillouin frequency shift, linewidth, and brightfield image
     Plotting.plotImages(fullPath, rawData, procData, exp, scan, surfZ, \
                         fmin, fmax, lmin, lmax, pmin, pmax, saveFig)
+
+#%%
+###### Plot XZ image for single exp, single scan ######
+
+# Save figures?
+saveFig = False
+
+# Frequency, linewidth, signal ranges for plotting
+fmin = 4.95    # GHz  #5.00 #9.0 #5.3  #5.58
+fmax = 5.45    # GHz  #5.60 #9.6 #6.5 #5.45 #5.82
+lmin = 0.20    # GHz  #0.30 #0.2
+lmax = 0.70    # GHz  #0.65 #0.7
+pmin = 1.0e4   # Brillouin photons (integrated) #2.2e4
+pmax = 0.8e5   # Brillouin photons (integrated) #3.2e4
+
+# Exp to plot
+exp = 'Exp_0'
+scan = 'Scan_0'
+surfZ = 0 # Z-coordinate of surface
+
+# Plot Brillouin frequency shift, linewidth, and brightfield image
+Plotting.plotXZimage(fullPath, rawData, procData, exp, scan, \
+                    fmin, fmax, lmin, lmax, pmin, pmax, saveFig)
 
 #%%
 ###### Plot Brightfield images (only) of all scans for exp ######
