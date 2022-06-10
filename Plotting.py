@@ -394,7 +394,7 @@ def plotXZimage(path, rawData, procData, exp, scan, fmin=5.58, fmax=5.82, lmin=0
     ### Plot Brightfield images:
     # Size of single FLIR camera frame in um
     imageSize = 9000.0/rawData[exp][scan]['attrs']['paramtree/Microscope Camera/Magnification']
-    for z in range(procData[exp][scan]['FreqArr'].shape[2]):
+    for z in range(procData[exp][scan]['FreqArr'].shape[0]):
         depth = z*measStep[2]
 
         if 'CMOSImage' in rawData[exp][scan].keys():
